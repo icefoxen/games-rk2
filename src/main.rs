@@ -1,5 +1,7 @@
 extern crate ggez;
 extern crate ggez_goodies;
+extern crate specs;
+extern crate nalgebra;
 use ggez::conf;
 use ggez::game::{Game, GameState};
 use ggez::{GameResult, Context};
@@ -7,9 +9,25 @@ use ggez::graphics;
 use ggez::timer;
 use ggez_goodies::asset;
 
+use nalgebra as na;
+
 
 use std::rc::Rc;
 use std::time::Duration;
+
+type Vec2 = na::Vector2<f64>;
+
+#[derive(Clone, Debug)]
+struct CPosition(Vec2);
+impl specs::Component for CPosition {
+    type Storage = specs::VecStorage<CPosition>;
+}
+
+#[derive(Clone, Debug)]
+struct CImage(graphics::Image);
+impl specs::Component for CImage {
+    type Storage = specs::VecStorage<CImage>;
+}
 
 struct Assets {
     images: asset::AssetCache<String, graphics::Image>,
@@ -24,6 +42,14 @@ impl Assets {
 // First we make a structure to contain the game's state
 struct MainState {
     assets: Assets,
+    world: specs::World,
+}
+
+fn setup_world() -> specs::World {
+    let mut w = specs::World::new();
+    w.register::<CPosition>();
+
+    w
 }
 
 // Then we implement the `ggez::game::GameState` trait on it, which
@@ -37,7 +63,11 @@ impl GameState for MainState {
 
         let assets = Assets::new();
 
-        let s = MainState { assets: assets };
+        let w = setup_world();
+        let s = MainState {
+            assets: assets,
+            world: w,
+        };
         Ok(s)
     }
 

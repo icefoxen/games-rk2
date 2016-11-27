@@ -11,5 +11,7 @@ ggez = { git = "https://github.com/ggez/ggez", branch = "devel" }
 #ggez-goodies = { git = "https://github.com/ggez/ggez-goodies", branch = "master" }
 ggez-goodies = { path = "/home/icefox/src/ggez-goodies" }
 
-rand = "0.3"
+specs = "0.7"
+
+#rand = "0.3"
 nalgebra = "0.10"

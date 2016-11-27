@@ -1,14 +1,29 @@
 extern crate ggez;
+extern crate ggez_goodies;
 use ggez::conf;
 use ggez::game::{Game, GameState};
 use ggez::{GameResult, Context};
 use ggez::graphics;
 use ggez::timer;
+use ggez_goodies::asset;
+
+
+use std::rc::Rc;
 use std::time::Duration;
+
+struct Assets {
+    images: asset::AssetCache<String, graphics::Image>,
+}
+
+impl Assets {
+    fn new() -> Self {
+        Assets { images: asset::AssetCache::new() }
+    }
+}
 
 // First we make a structure to contain the game's state
 struct MainState {
-    text: graphics::Text,
+    assets: Assets,
 }
 
 // Then we implement the `ggez::game::GameState` trait on it, which
@@ -18,11 +33,11 @@ struct MainState {
 // The `GameState` trait also contains callbacks for event handling
 // that you can override if you wish, but the defaults are fine.
 impl GameState for MainState {
-    fn load(ctx: &mut Context, _conf: &conf::Conf) -> GameResult<MainState> {
-        let font = graphics::Font::new(ctx, "fonts/DejaVuSerif.ttf", 48).unwrap();
-        let text = graphics::Text::new(ctx, "Hello world!", &font).unwrap();
+    fn load(_ctx: &mut Context, _conf: &conf::Conf) -> GameResult<MainState> {
 
-        let s = MainState { text: text };
+        let assets = Assets::new();
+
+        let s = MainState { assets: assets };
         Ok(s)
     }
 
@@ -32,7 +47,10 @@ impl GameState for MainState {
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         ctx.renderer.clear();
-        try!(graphics::draw(ctx, &mut self.text, None, None));
+
+        let kiwi = self.assets.images.get_state_mut(&"images/kiwi.png".to_string(), ctx)?;
+        graphics::draw(ctx, Rc::get_mut(kiwi).unwrap(), None, None)?;
+
         ctx.renderer.present();
         timer::sleep_until_next_frame(ctx, 60);
         Ok(())

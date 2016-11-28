@@ -99,6 +99,16 @@ impl GameState for MainState {
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         ctx.renderer.clear();
 
+        use specs::Join;
+
+        let world = self.planner.mut_world();
+        let r1 = world.read::<CPosition>();
+        let r2 = world.read::<CPlayer>();
+
+        for (pos, player) in (&r1, &r2).iter() {
+            println!("Position is: {:?}, {:?}", pos, player);
+        }
+
         let kiwi = self.assets.images.get_state_mut(&"images/kiwi.png".to_string(), ctx)?;
         graphics::draw(ctx, Rc::get_mut(kiwi).unwrap(), None, None)?;
 

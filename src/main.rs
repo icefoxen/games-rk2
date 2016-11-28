@@ -23,10 +23,12 @@ impl specs::Component for CPosition {
     type Storage = specs::VecStorage<CPosition>;
 }
 
-#[derive(Clone, Debug)]
-struct CImage(graphics::Image);
-impl specs::Component for CImage {
-    type Storage = specs::VecStorage<CImage>;
+// Just a marker that a particular entity is the player.
+#[derive(Clone, Debug, Default)]
+struct CPlayer;
+
+impl specs::Component for CPlayer {
+    type Storage = specs::NullStorage<CPlayer>;
 }
 
 struct Assets {
@@ -42,14 +44,22 @@ impl Assets {
 // First we make a structure to contain the game's state
 struct MainState {
     assets: Assets,
-    world: specs::World,
+    // world: specs::World,
+    planner: specs::Planner<()>,
 }
 
-fn setup_world() -> specs::World {
+fn create_world() -> specs::World {
     let mut w = specs::World::new();
     w.register::<CPosition>();
-
+    w.register::<CPlayer>();
     w
+}
+
+fn create_player(world: &mut specs::World) -> specs::Entity {
+    world.create_now()
+        .with(CPosition(Vec2::new(0.0, 0.0)))
+        .with(CPlayer)
+        .build()
 }
 
 // Then we implement the `ggez::game::GameState` trait on it, which
@@ -63,15 +73,28 @@ impl GameState for MainState {
 
         let assets = Assets::new();
 
-        let w = setup_world();
+        let mut w = create_world();
+        let _p = create_player(&mut w);
+        let planner = specs::Planner::new(w, 1);
         let s = MainState {
             assets: assets,
-            world: w,
+            // world: w,
+            planner: planner,
         };
         Ok(s)
     }
 
-    fn update(&mut self, _ctx: &mut Context, _dt: Duration) -> GameResult<()> {
+    fn update(&mut self, _ctx: &mut Context, dt: Duration) -> GameResult<()> {
+        let seconds = timer::duration_to_f64(dt);
+        let player_update = move |pos: &mut CPosition| {
+            println!("Updating player position, is now {:?}, dt is {}",
+                     pos,
+                     seconds);
+            let CPosition(mut p) = *pos;
+            p += Vec2::new(1.0, 1.0) * seconds;
+            *pos = CPosition(p);
+        };
+        self.planner.run1w0r(player_update);
         Ok(())
     }
 

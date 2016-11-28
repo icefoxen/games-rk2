@@ -90,9 +90,7 @@ impl GameState for MainState {
             println!("Updating player position, is now {:?}, dt is {}",
                      pos,
                      seconds);
-            let CPosition(mut p) = *pos;
-            p += Vec2::new(1.0, 1.0) * seconds;
-            *pos = CPosition(p);
+            pos.0 += Vec2::new(1.0, 1.0) * seconds;
         };
         self.planner.run1w0r(player_update);
         Ok(())

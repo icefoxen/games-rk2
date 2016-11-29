@@ -8,9 +8,10 @@ use ggez::{GameResult, Context};
 use ggez::graphics;
 use ggez::timer;
 use ggez_goodies::asset;
+use ggez_goodies::asset::StateLoadable;
 
+use specs::Join;
 use nalgebra as na;
-
 
 use std::rc::Rc;
 use std::time::Duration;
@@ -31,19 +32,34 @@ impl specs::Component for CPlayer {
     type Storage = specs::NullStorage<CPlayer>;
 }
 
-struct Assets {
-    images: asset::AssetCache<String, graphics::Image>,
+
+#[derive(Clone, Debug)]
+struct CImage(asset::AssetHandle);
+impl specs::Component for CImage {
+    type Storage = specs::VecStorage<CImage>;
 }
 
-impl Assets {
+/*
+#[derive(Clone, Debug)]
+struct CImage(graphics::Image);
+impl specs::Component for CImage {
+    type Storage = specs::VecStorage<CImage>;
+}
+*/
+
+struct Assets<'a> {
+    images: asset::AssetCache2<&'a str, graphics::Image>,
+}
+
+impl<'a> Assets<'a> {
     fn new() -> Self {
-        Assets { images: asset::AssetCache::new() }
+        Assets { images: asset::AssetCache2::new() }
     }
 }
 
 // First we make a structure to contain the game's state
-struct MainState {
-    assets: Assets,
+struct MainState<'a> {
+    assets: Assets<'a>,
     // world: specs::World,
     planner: specs::Planner<()>,
 }
@@ -52,13 +68,16 @@ fn create_world() -> specs::World {
     let mut w = specs::World::new();
     w.register::<CPosition>();
     w.register::<CPlayer>();
+    w.register::<CImage>();
     w
 }
 
-fn create_player(world: &mut specs::World) -> specs::Entity {
+fn create_player(world: &mut specs::World, assets: &mut Assets, ctx: &mut Context) -> specs::Entity {
+    let (handle, _) = assets.images.get_key_state(&"kiwi.png", ctx).unwrap();
     world.create_now()
         .with(CPosition(Vec2::new(0.0, 0.0)))
         .with(CPlayer)
+        .with(CImage(handle))
         .build()
 }
 
@@ -68,13 +87,13 @@ fn create_player(world: &mut specs::World) -> specs::Entity {
 //
 // The `GameState` trait also contains callbacks for event handling
 // that you can override if you wish, but the defaults are fine.
-impl GameState for MainState {
-    fn load(_ctx: &mut Context, _conf: &conf::Conf) -> GameResult<MainState> {
+impl<'a> GameState for MainState<'a> {
+    fn load(ctx: &mut Context, _conf: &conf::Conf) -> GameResult<MainState<'a>> {
 
-        let assets = Assets::new();
+        let mut assets = Assets::new();
 
         let mut w = create_world();
-        let _p = create_player(&mut w);
+        let _p = create_player(&mut w, &mut assets, ctx);
         let planner = specs::Planner::new(w, 1);
         let s = MainState {
             assets: assets,
@@ -99,18 +118,19 @@ impl GameState for MainState {
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         ctx.renderer.clear();
 
-        use specs::Join;
-
         let world = self.planner.mut_world();
-        let r1 = world.read::<CPosition>();
-        let r2 = world.read::<CPlayer>();
+        let positions = world.read::<CPosition>();
+        let playermarkers = world.read::<CPlayer>();
+        let images = world.read::<CImage>();
 
-        for (pos, player) in (&r1, &r2).iter() {
-            println!("Position is: {:?}, {:?}", pos, player);
+        // For now we just collect all the components into a Vec,
+        // and then do our stuff to that vec.
+        for (pos, player, image) in (&positions, &playermarkers, &images).iter() {
+            println!("Position is: {:?}, {:?}, {:?}", pos, player, image);
         }
 
-        let kiwi = self.assets.images.get_state_mut(&"images/kiwi.png".to_string(), ctx)?;
-        graphics::draw(ctx, Rc::get_mut(kiwi).unwrap(), None, None)?;
+        //let kiwi = self.assets.images.get_state_mut(&"images/kiwi.png".to_string(), ctx)?;
+        //graphics::draw(ctx, Rc::get_mut(kiwi).unwrap(), None, None)?;
 
         ctx.renderer.present();
         timer::sleep_until_next_frame(ctx, 60);

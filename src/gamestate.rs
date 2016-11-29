@@ -47,6 +47,7 @@ pub struct MainState<'a> {
     assets: Assets<'a>,
     input: input::InputManager<Axis, Button>,
     planner: specs::Planner<()>,
+    screen_dimensions: (u32, u32),
 }
 
 fn create_world() -> specs::World {
@@ -77,8 +78,20 @@ fn create_input_manager() -> input::InputManager<Axis, Button> {
         .bind_key_to_axis(Keycode::Right, Axis::Horz, true)
 }
 
+/// Translate a world-space coordinate with the origin at the center
+/// to a screen-space coordinate with the origin at the upper-left.
+/// 'cause nobody uses CRT's anymore.
+fn world_to_screen_coords(location: Vec2, screen_dims: (u32, u32)) -> (u32, u32) {
+    let (sw, sh) = screen_dims;
+    let width = sw as f64;
+    let height = sh as f64;
+    let x = location.x + width / 2.0;
+    let y = height - (location.y + height / 2.0);
+    (x as u32, y as u32)
+}
+
 impl<'a> GameState for MainState<'a> {
-    fn load(ctx: &mut Context, _conf: &conf::Conf) -> GameResult<MainState<'a>> {
+    fn load(ctx: &mut Context, conf: &conf::Conf) -> GameResult<MainState<'a>> {
 
         let mut assets = Assets::new();
 
@@ -89,6 +102,7 @@ impl<'a> GameState for MainState<'a> {
             assets: assets,
             input: create_input_manager(),
             planner: planner,
+            screen_dimensions: (conf.window_width, conf.window_height),
         };
         Ok(s)
     }
@@ -117,11 +131,12 @@ impl<'a> GameState for MainState<'a> {
         let images = world.read::<CImage>();
 
         for (pos, _player, image) in (&positions, &playermarkers, &images).iter() {
-            //println!("Position is: {:?}, {:?}, {:?}", pos, player, image);
+            // println!("Position is: {:?}, {:?}, {:?}", pos, player, image);
             let kiwi = self.assets.images.get_mut(image.0).unwrap();
             let w = kiwi.width();
             let h = kiwi.height();
-            let r = graphics::Rect::new(pos.0.x as i32, pos.0.y as i32, w, h);
+            let (screen_x, screen_y) = world_to_screen_coords(pos.0, self.screen_dimensions);
+            let r = graphics::Rect::new(screen_x as i32, screen_y as i32, w, h);
             graphics::draw(ctx, kiwi, None, Some(r))?;
         }
 
@@ -130,18 +145,12 @@ impl<'a> GameState for MainState<'a> {
         Ok(())
     }
 
-    fn key_down_event(&mut self, 
-                      keycode: Option<Keycode>,
-                      _keymod: Mod,
-                      _repeat: bool) {
+    fn key_down_event(&mut self, keycode: Option<Keycode>, _keymod: Mod, _repeat: bool) {
         self.input.update_keydown(keycode);
     }
 
 
-    fn key_up_event(&mut self, 
-                      keycode: Option<Keycode>,
-                      _keymod: Mod,
-                      _repeat: bool) {
+    fn key_up_event(&mut self, keycode: Option<Keycode>, _keymod: Mod, _repeat: bool) {
         self.input.update_keyup(keycode);
     }
 }

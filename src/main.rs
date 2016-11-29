@@ -39,13 +39,12 @@ impl specs::Component for CImage {
     type Storage = specs::VecStorage<CImage>;
 }
 
-/*
-#[derive(Clone, Debug)]
-struct CImage(graphics::Image);
-impl specs::Component for CImage {
-    type Storage = specs::VecStorage<CImage>;
-}
-*/
+// #[derive(Clone, Debug)]
+// struct CImage(graphics::Image);
+// impl specs::Component for CImage {
+// type Storage = specs::VecStorage<CImage>;
+// }
+//
 
 struct Assets<'a> {
     images: asset::AssetCache2<&'a str, graphics::Image>,
@@ -72,8 +71,11 @@ fn create_world() -> specs::World {
     w
 }
 
-fn create_player(world: &mut specs::World, assets: &mut Assets, ctx: &mut Context) -> specs::Entity {
-    let (handle, _) = assets.images.get_key_state(&"kiwi.png", ctx).unwrap();
+fn create_player(world: &mut specs::World,
+                 assets: &mut Assets,
+                 ctx: &mut Context)
+                 -> specs::Entity {
+    let (handle, _) = assets.images.get_key_state(&"images/kiwi.png", ctx).unwrap();
     world.create_now()
         .with(CPosition(Vec2::new(0.0, 0.0)))
         .with(CPlayer)
@@ -127,10 +129,9 @@ impl<'a> GameState for MainState<'a> {
         // and then do our stuff to that vec.
         for (pos, player, image) in (&positions, &playermarkers, &images).iter() {
             println!("Position is: {:?}, {:?}, {:?}", pos, player, image);
+            let kiwi = self.assets.images.get_mut(image.0);
+            graphics::draw(ctx, kiwi.unwrap(), None, None)?;
         }
-
-        //let kiwi = self.assets.images.get_state_mut(&"images/kiwi.png".to_string(), ctx)?;
-        //graphics::draw(ctx, Rc::get_mut(kiwi).unwrap(), None, None)?;
 
         ctx.renderer.present();
         timer::sleep_until_next_frame(ctx, 60);

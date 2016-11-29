@@ -3,11 +3,13 @@ extern crate ggez_goodies;
 extern crate specs;
 extern crate nalgebra;
 use ggez::conf;
+use ggez::event::*;
 use ggez::game::GameState;
 use ggez::{GameResult, Context};
 use ggez::graphics;
 use ggez::timer;
 use ggez_goodies::asset;
+use ggez_goodies::input;
 
 use specs::Join;
 
@@ -15,9 +17,21 @@ use std::time::Duration;
 
 use components::*;
 use util::*;
-/// ///////////////////////////////////////////////////////////////////////
-/// Global state thingies
-/// ///////////////////////////////////////////////////////////////////////
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+enum Button {
+    Nuffin,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+enum Axis {
+    Vert,
+    Horz,
+}
+
+// /////////////////////////////////////////////////////////////////////
+// Global state thingies
+// /////////////////////////////////////////////////////////////////////
 
 struct Assets<'a> {
     images: asset::AssetCache2<&'a str, graphics::Image>,
@@ -31,6 +45,7 @@ impl<'a> Assets<'a> {
 
 pub struct MainState<'a> {
     assets: Assets<'a>,
+    input: input::InputManager<Axis, Button>,
     planner: specs::Planner<()>,
 }
 
@@ -54,6 +69,14 @@ fn create_player(world: &mut specs::World,
         .build()
 }
 
+fn create_input_manager() -> input::InputManager<Axis, Button> {
+    input::InputManager::new()
+        .bind_key_to_axis(Keycode::Up, Axis::Vert, true)
+        .bind_key_to_axis(Keycode::Down, Axis::Vert, false)
+        .bind_key_to_axis(Keycode::Left, Axis::Horz, false)
+        .bind_key_to_axis(Keycode::Right, Axis::Horz, true)
+}
+
 impl<'a> GameState for MainState<'a> {
     fn load(ctx: &mut Context, _conf: &conf::Conf) -> GameResult<MainState<'a>> {
 
@@ -64,7 +87,7 @@ impl<'a> GameState for MainState<'a> {
         let planner = specs::Planner::new(w, 1);
         let s = MainState {
             assets: assets,
-            // world: w,
+            input: create_input_manager(),
             planner: planner,
         };
         Ok(s)
@@ -72,11 +95,14 @@ impl<'a> GameState for MainState<'a> {
 
     fn update(&mut self, _ctx: &mut Context, dt: Duration) -> GameResult<()> {
         let seconds = timer::duration_to_f64(dt);
+        self.input.update(seconds);
+        let x_axis = self.input.get_axis(Axis::Horz);
+        let y_axis = self.input.get_axis(Axis::Vert);
+
         let player_update = move |pos: &mut CPosition| {
-            println!("Updating player position, is now {:?}, dt is {}",
-                     pos,
-                     seconds);
-            pos.0 += Vec2::new(1.0, 1.0) * seconds;
+            let xvel = 100.0 * x_axis * seconds;
+            let yvel = 100.0 * y_axis * seconds;
+            pos.0 += Vec2::new(xvel, yvel);
         };
         self.planner.run1w0r(player_update);
         Ok(())
@@ -90,14 +116,32 @@ impl<'a> GameState for MainState<'a> {
         let playermarkers = world.read::<CPlayer>();
         let images = world.read::<CImage>();
 
-        for (pos, player, image) in (&positions, &playermarkers, &images).iter() {
-            println!("Position is: {:?}, {:?}, {:?}", pos, player, image);
-            let kiwi = self.assets.images.get_mut(image.0);
-            graphics::draw(ctx, kiwi.unwrap(), None, None)?;
+        for (pos, _player, image) in (&positions, &playermarkers, &images).iter() {
+            //println!("Position is: {:?}, {:?}, {:?}", pos, player, image);
+            let kiwi = self.assets.images.get_mut(image.0).unwrap();
+            let w = kiwi.width();
+            let h = kiwi.height();
+            let r = graphics::Rect::new(pos.0.x as i32, pos.0.y as i32, w, h);
+            graphics::draw(ctx, kiwi, None, Some(r))?;
         }
 
         ctx.renderer.present();
         timer::sleep_until_next_frame(ctx, 60);
         Ok(())
+    }
+
+    fn key_down_event(&mut self, 
+                      keycode: Option<Keycode>,
+                      _keymod: Mod,
+                      _repeat: bool) {
+        self.input.update_keydown(keycode);
+    }
+
+
+    fn key_up_event(&mut self, 
+                      keycode: Option<Keycode>,
+                      _keymod: Mod,
+                      _repeat: bool) {
+        self.input.update_keyup(keycode);
     }
 }

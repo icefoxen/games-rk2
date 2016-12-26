@@ -14,11 +14,29 @@ impl specs::Component for CPosition {
     type Storage = specs::VecStorage<CPosition>;
 }
 
+
+#[derive(Clone, Debug)]
+pub struct CMotion {
+    pub velocity: Vec2,
+    pub acceleration: Vec2,
+}
+impl specs::Component for CMotion {
+    type Storage = specs::VecStorage<CMotion>;
+}
+
 // Just a marker that a particular entity is the player.
 #[derive(Clone, Debug, Default)]
 pub struct CPlayer;
 impl specs::Component for CPlayer {
     type Storage = specs::NullStorage<CPlayer>;
+}
+
+#[derive(Clone, Debug)]
+pub struct CShot {
+    pub damage: u32,
+}
+impl specs::Component for CShot {
+    type Storage = specs::VecStorage<CShot>;
 }
 
 

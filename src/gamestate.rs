@@ -46,6 +46,7 @@ pub struct MainState {
 fn create_world() -> specs::World {
     let mut w = specs::World::new();
     w.register::<CPosition>();
+    w.register::<CMotion>();
     w.register::<CPlayer>();
     w.register::<CImage>();
     w.register::<CBackgroundScroller>();
@@ -79,6 +80,25 @@ fn create_background(world: &mut specs::World,
 }
 
 
+fn create_shot(world: &mut specs::World,
+               assets: &mut Assets,
+               ctx: &mut Context,
+               position: Vec2)
+               -> specs::Entity {
+    let (handle, _) =
+        assets.images.get_key_state(&"backgrounds/Level1_BG.png".to_string(), ctx).unwrap();
+    world.create_now()
+        .with(CPosition(position))
+        .with(CImage(handle))
+        .with(CShot { damage: 1 })
+        .with(CMotion {
+            acceleration: Vec2::new(0.0, 0.1),
+            velocity: nalgebra::zero(),
+        })
+        .build()
+}
+
+
 impl<'a> GameState for MainState {
     fn load(ctx: &mut Context, conf: &conf::Conf) -> GameResult<Self> {
 
@@ -90,6 +110,10 @@ impl<'a> GameState for MainState {
         let c = camera::Camera::new(conf.window_width, conf.window_height, 40.0, 30.0);
         let mut planner = specs::Planner::new(w, 1);
         planner.add_system(BackgroundSystem, "background", 0);
+        let dt = 1.0 / 60.0;
+        let motion = MovementSystem::new(dt);
+        planner.add_system(motion, "motion", 0);
+
         let s = MainState {
             assets: assets,
             input: create_input_manager(),
@@ -105,9 +129,7 @@ impl<'a> GameState for MainState {
         let x_axis = self.input.get_axis(Axis::Horz);
         let y_axis = self.input.get_axis(Axis::Vert);
 
-        if self.input.get_button_down(Button::Fire) {
-            println!("Bang!");
-        }
+        let firing = self.input.get_button_down(Button::Fire);
         // We could refactor this out into a planner...
         // but then we'd need a separate planner that handles
         // the InputState, so for now it feels like squishing

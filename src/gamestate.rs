@@ -48,6 +48,7 @@ fn create_world() -> specs::World {
     w.register::<CPosition>();
     w.register::<CMotion>();
     w.register::<CPlayer>();
+    w.register::<CShot>();
     w.register::<CImage>();
     w.register::<CBackgroundScroller>();
     w
@@ -59,7 +60,7 @@ fn create_player(world: &mut specs::World,
                  -> specs::Entity {
     let (handle, _) = assets.images.get_key_state(&"images/kiwi.png".to_string(), ctx).unwrap();
     world.create_now()
-        .with(CPosition(Vec2::new(0.0, 0.0)))
+        .with(CPosition(Vec2::new(0.0, -12.0)))
         .with(CPlayer)
         .with(CImage(handle))
         .build()
@@ -86,13 +87,13 @@ fn create_shot(world: &mut specs::World,
                position: Vec2)
                -> specs::Entity {
     let (handle, _) =
-        assets.images.get_key_state(&"backgrounds/Level1_BG.png".to_string(), ctx).unwrap();
+        assets.images.get_key_state(&"images/Projectile_Rocket.png".to_string(), ctx).unwrap();
     world.create_now()
         .with(CPosition(position))
         .with(CImage(handle))
         .with(CShot { damage: 1 })
         .with(CMotion {
-            acceleration: Vec2::new(0.0, 0.1),
+            acceleration: Vec2::new(0.0, 1.0),
             velocity: nalgebra::zero(),
         })
         .build()
@@ -107,6 +108,7 @@ impl<'a> GameState for MainState {
         let mut w = create_world();
         let _b = create_background(&mut w, &mut assets, ctx);
         let _p = create_player(&mut w, &mut assets, ctx);
+        let _s = create_shot(&mut w, &mut assets, ctx, nalgebra::zero());
         let c = camera::Camera::new(conf.window_width, conf.window_height, 40.0, 30.0);
         let mut planner = specs::Planner::new(w, 1);
         planner.add_system(BackgroundSystem, "background", 0);

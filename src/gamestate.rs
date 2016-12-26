@@ -104,8 +104,8 @@ impl<'a> GameState for MainState {
         let mut assets = Assets::new();
 
         let mut w = create_world();
-        let _p = create_player(&mut w, &mut assets, ctx);
         let _b = create_background(&mut w, &mut assets, ctx);
+        let _p = create_player(&mut w, &mut assets, ctx);
         let c = camera::Camera::new(conf.window_width, conf.window_height, 40.0, 30.0);
         let planner = specs::Planner::new(w, 1);
         let s = MainState {
@@ -144,11 +144,9 @@ impl<'a> GameState for MainState {
 
         let world = self.planner.mut_world();
         let positions = world.read::<CPosition>();
-        let playermarkers = world.read::<CPlayer>();
         let images = world.read::<CImage>();
 
         for (pos, image) in (&positions, &images).iter() {
-            // println!("Position is: {:?}, {:?}, {:?}", pos, player, image);
             let image = self.assets.images.get_mut(image.0).unwrap();
             let w = image.width();
             let h = image.height();
@@ -156,17 +154,6 @@ impl<'a> GameState for MainState {
             let r = graphics::Rect::new(screen_x as i32, screen_y as i32, w, h);
             graphics::draw(ctx, image, None, Some(r))?;
         }
-
-        for (pos, _player, image) in (&positions, &playermarkers, &images).iter() {
-            // println!("Position is: {:?}, {:?}, {:?}", pos, player, image);
-            let kiwi = self.assets.images.get_mut(image.0).unwrap();
-            let w = kiwi.width();
-            let h = kiwi.height();
-            let (screen_x, screen_y) = self.camera.world_to_screen_coords(pos.0);
-            let r = graphics::Rect::new(screen_x as i32, screen_y as i32, w, h);
-            graphics::draw(ctx, kiwi, None, Some(r))?;
-        }
-
         ctx.renderer.present();
         timer::sleep_until_next_frame(ctx, 60);
         Ok(())

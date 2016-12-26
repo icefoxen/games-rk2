@@ -6,6 +6,8 @@ use ggez::conf;
 use ggez::game::Game;
 
 pub mod components;
+pub mod input;
+pub mod systems;
 pub mod gamestate;
 pub mod util;
 

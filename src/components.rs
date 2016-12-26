@@ -1,6 +1,6 @@
 use specs;
 use ggez_goodies::asset;
-use ggez_goodies::camera;
+// use ggez_goodies::camera;
 
 use util::*;
 
@@ -28,18 +28,18 @@ impl specs::Component for CImage {
     type Storage = specs::VecStorage<CImage>;
 }
 
-pub struct CCamera {
-    pub c: camera::Camera,
-}
-impl specs::Component for CCamera {
-    type Storage = specs::HashMapStorage<CCamera>;
-}
+// pub struct CCamera {
+//     pub c: camera::Camera,
+// }
+// impl specs::Component for CCamera {
+//     type Storage = specs::HashMapStorage<CCamera>;
+// }
 
-impl CCamera {
-    pub fn new(screen_width: u32, screen_height: u32) -> Self {
-        CCamera { c: camera::Camera::new(screen_width, screen_height, 40.0, 30.0) }
-    }
-}
+// impl CCamera {
+//     pub fn new(screen_width: u32, screen_height: u32) -> Self {
+//         CCamera { c: camera::Camera::new(screen_width, screen_height, 40.0, 30.0) }
+//     }
+// }
 
 #[derive(Clone, Debug)]
 pub struct CBackgroundScroller {

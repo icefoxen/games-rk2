@@ -18,18 +18,9 @@ use specs::Join;
 use std::time::Duration;
 
 use components::*;
+use input::*;
+use systems::*;
 use util::*;
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-enum Button {
-    Fire,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-enum Axis {
-    Vert,
-    Horz,
-}
 
 // /////////////////////////////////////////////////////////////////////
 // Global state thingies
@@ -58,7 +49,6 @@ fn create_world() -> specs::World {
     w.register::<CPlayer>();
     w.register::<CImage>();
     w.register::<CBackgroundScroller>();
-    w.register::<CCamera>();
     w
 }
 
@@ -82,21 +72,12 @@ fn create_background(world: &mut specs::World,
     let (handle, _) =
         assets.images.get_key_state(&"backgrounds/Level1_BG.png".to_string(), ctx).unwrap();
     world.create_now()
-        .with(CPosition(Vec2::new(0.0, 0.0)))
+        .with(CPosition(Vec2::new(-15.0, 80.0)))
         .with(CImage(handle))
         .with(CBackgroundScroller::new())
         .build()
 }
 
-
-fn create_input_manager() -> input::InputManager<Axis, Button> {
-    input::InputManager::new()
-        .bind_key_to_axis(Keycode::Up, Axis::Vert, true)
-        .bind_key_to_axis(Keycode::Down, Axis::Vert, false)
-        .bind_key_to_axis(Keycode::Left, Axis::Horz, false)
-        .bind_key_to_axis(Keycode::Right, Axis::Horz, true)
-        .bind_key_to_button(Keycode::Z, Button::Fire)
-}
 
 impl<'a> GameState for MainState {
     fn load(ctx: &mut Context, conf: &conf::Conf) -> GameResult<Self> {
@@ -107,7 +88,8 @@ impl<'a> GameState for MainState {
         let _b = create_background(&mut w, &mut assets, ctx);
         let _p = create_player(&mut w, &mut assets, ctx);
         let c = camera::Camera::new(conf.window_width, conf.window_height, 40.0, 30.0);
-        let planner = specs::Planner::new(w, 1);
+        let mut planner = specs::Planner::new(w, 1);
+        planner.add_system(BackgroundSystem, "background", 0);
         let s = MainState {
             assets: assets,
             input: create_input_manager(),
@@ -126,16 +108,18 @@ impl<'a> GameState for MainState {
         if self.input.get_button_down(Button::Fire) {
             println!("Bang!");
         }
-
+        // We could refactor this out into a planner...
+        // but then we'd need a separate planner that handles
+        // the InputState, so for now it feels like squishing
+        // a fly with a sledgehammer...
+        // We'll need it for more sophisticated UI stuff though!
         let player_update = move |pos: &mut CPosition, _player: &CPlayer| {
             let xvel = 10.0 * x_axis * seconds;
             let yvel = 10.0 * y_axis * seconds;
             pos.0 += Vec2::new(xvel, yvel);
         };
-        let background_update =
-            |pos: &mut CPosition, scroller: &CBackgroundScroller| pos.0 += scroller.scroll_speed;
         self.planner.run1w1r(player_update);
-        self.planner.run1w1r(background_update);
+        self.planner.dispatch(());
         Ok(())
     }
 
